@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+
+#------------------------------------------------------------------------------
+# See the USAGE message below for commands.
+#------------------------------------------------------------------------------
+
+set -e
+
+############################################################
+# Config
+############################################################
+DOCKER_IMAGE_NAME="lucidchart/resource-count"
+DOCKER_BUILD_CMD="docker build . -t $DOCKER_IMAGE_NAME"
+DOCKER_RUN_CMD="docker run -it --rm -v $HOME/.aws:/root/.aws -v $PWD:/aws"
+
+############################################################
+# Usage
+############################################################
+if [[ $# -lt 1 ]]; then
+    echo
+    echo "USAGE: ./run.sh [COMMAND]"
+    echo
+    echo "Commands:"
+    echo "  setup - Setup the initial dev env by building the necessary"
+    echo "          Docker container."
+    echo
+    echo "  count <params> - Run the resource counting script. Params:"
+    echo "                     --profile <name> --regions <region1> <region2> -c"
+    echo
+    echo "  exec - Run a one-off command in a container."
+    echo
+    echo "  shell - Run a bash shell in a container."
+    echo
+    echo "######################################################################"
+    echo "NOTE: This script requires that you have Docker installed."
+    echo
+    echo "NOTE: You must have first used 'aws configure --profile <name>' to"
+    echo "      configure AWS credentials that are mounted into the container."
+    echo "######################################################################"
+    echo
+    exit
+fi
+
+
+############################################################
+# Main Script
+############################################################
+while [[ $# -gt 0 ]]; do
+    param="$1"
+    shift
+    case "$param" in
+        setup)
+            echo
+            echo "######################################################################"
+            echo "# Building '$DOCKER_IMAGE_NAME' Docker image..."
+            echo "######################################################################"
+            echo
+            $DOCKER_BUILD_CMD
+            break
+            ;;
+
+        count)
+            $DOCKER_RUN_CMD $DOCKER_IMAGE_NAME $@
+            break
+            ;;
+
+        exec)
+            $DOCKER_RUN_CMD --entrypoint /bin/bash $DOCKER_IMAGE_NAME -c $@
+            break
+            ;;
+
+        shell|bash)
+            $DOCKER_RUN_CMD --entrypoint /bin/bash $DOCKER_IMAGE_NAME -l
+            break
+            ;;
+
+        *)
+            echo "Unknown command: $param"
+            break
+            ;;
+    esac
+done
